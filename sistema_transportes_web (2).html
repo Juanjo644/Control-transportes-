@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control de Empresa de Transportes</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; }
+    h1, h2 { text-align: center; }
+    section { margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #eee; }
+    input, select { width: 100%; padding: 6px; margin: 4px 0; }
+    .container { max-width: 1000px; margin: auto; }
+    .resumen { background: #e0ffe0; padding: 10px; border: 1px solid #a0d0a0; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Panel de Control - Empresa de Transportes</h1>
+
+    <section>
+      <h2>Inventario de Vehículos</h2>
+      <table id="tablaVehiculos">
+        <thead>
+          <tr>
+            <th>Placa</th><th>Modelo</th><th>Año</th><th>Estado</th><th>Observaciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <h3>Agregar Vehículo</h3>
+      <input type="text" placeholder="Placa" id="placa" />
+      <input type="text" placeholder="Modelo" id="modelo" />
+      <input type="number" placeholder="Año" id="anio" />
+      <select id="estado">
+        <option value="Activo">Activo</option>
+        <option value="Taller">Taller</option>
+      </select>
+      <input type="text" placeholder="Observaciones" id="obs" />
+      <button onclick="agregarVehiculo()">Agregar</button>
+    </section>
+
+    <section>
+      <h2>Inventario de Repuestos Disponibles</h2>
+      <table id="tablaStock">
+        <thead>
+          <tr>
+            <th>Nombre del Repuesto</th><th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <h3>Agregar Repuesto al Inventario</h3>
+      <input type="text" placeholder="Nombre del Repuesto" id="nombreStock" />
+      <input type="number" placeholder="Cantidad" id="cantidadStock" />
+      <button onclick="agregarStock()">Agregar</button>
+    </section>
+
+    <section>
+      <h2>Historial de Repuestos</h2>
+      <table id="tablaRepuestos">
+        <thead>
+          <tr>
+            <th>Vehículo</th><th>Repuesto</th><th>Fecha</th><th>Costo</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <h3>Agregar Repuesto</h3>
+      <input type="text" placeholder="Vehículo (Placa)" id="vehiculoRep" />
+      <input type="text" placeholder="Repuesto" id="repuesto" />
+      <input type="date" id="fechaRep" />
+      <input type="number" placeholder="Costo" id="costoRep" />
+      <button onclick="agregarRepuesto()">Agregar</button>
+    </section>
+
+    <section>
+      <h2>Historial de Ingresos</h2>
+      <table id="tablaIngresos">
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Descripción</th><th>Monto</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <h3>Agregar Ingreso</h3>
+      <input type="date" id="fechaIngreso" />
+      <input type="text" placeholder="Descripción" id="descIngreso" />
+      <input type="number" placeholder="Monto" id="montoIngreso" />
+      <button onclick="agregarIngreso()">Agregar</button>
+    </section>
+
+    <section>
+      <h2>Resumen Financiero</h2>
+      <div class="resumen">
+        <p><strong>Total Ingresos:</strong> Q<span id="totalIngresos">0</span></p>
+        <p><strong>Total Gastos en Repuestos:</strong> Q<span id="totalGastos">0</span></p>
+        <p><strong>Ganancia/Pérdida Neta:</strong> Q<span id="balance">0</span></p>
+      </div>
+      <canvas id="graficoResumen" width="400" height="200"></canvas>
+    </section>
+  </div>
+
+  <script>
+    function cargarDatos() {
+      const vehiculos = JSON.parse(localStorage.getItem("vehiculos")) || [];
+      const repuestos = JSON.parse(localStorage.getItem("repuestos")) || [];
+      const ingresos = JSON.parse(localStorage.getItem("ingresos")) || [];
+      const stock = JSON.parse(localStorage.getItem("stock")) || [];
+      vehiculos.forEach(v => insertarFilaVehiculo(v));
+      repuestos.forEach(r => insertarFilaRepuesto(r));
+      ingresos.forEach(i => insertarFilaIngreso(i));
+      stock.forEach(s => insertarFilaStock(s));
+      actualizarResumen();
+    }
+
+    function guardarDatos(key, data) {
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+
+    function insertarFilaVehiculo(v) {
+      const tabla = document.getElementById("tablaVehiculos").querySelector("tbody");
+      const fila = tabla.insertRow();
+      fila.insertCell(0).textContent = v.placa;
+      fila.insertCell(1).textContent = v.modelo;
+      fila.insertCell(2).textContent = v.anio;
+      fila.insertCell(3).textContent = v.estado;
+      fila.insertCell(4).textContent = v.obs;
+    }
+
+    function insertarFilaRepuesto(r) {
+      const tabla = document.getElementById("tablaRepuestos").querySelector("tbody");
+      const fila = tabla.insertRow();
+      fila.insertCell(0).textContent = r.vehiculo;
+      fila.insertCell(1).textContent = r.repuesto;
+      fila.insertCell(2).textContent = r.fecha;
+      fila.insertCell(3).textContent = r.costo;
+    }
+
+    function insertarFilaIngreso(i) {
+      const tabla = document.getElementById("tablaIngresos").querySelector("tbody");
+      const fila = tabla.insertRow();
+      fila.insertCell(0).textContent = i.fecha;
+      fila.insertCell(1).textContent = i.descripcion;
+      fila.insertCell(2).textContent = i.monto;
+    }
+
+    function insertarFilaStock(s) {
+      const tabla = document.getElementById("tablaStock").querySelector("tbody");
+      const fila = tabla.insertRow();
+      fila.insertCell(0).textContent = s.nombre;
+      fila.insertCell(1).textContent = s.cantidad;
+    }
+
+    function agregarVehiculo() {
+      const v = {
+        placa: document.getElementById("placa").value,
+        modelo: document.getElementById("modelo").value,
+        anio: document.getElementById("anio").value,
+        estado: document.getElementById("estado").value,
+        obs: document.getElementById("obs").value
+      };
+      const vehiculos = JSON.parse(localStorage.getItem("vehiculos")) || [];
+      vehiculos.push(v);
+      guardarDatos("vehiculos", vehiculos);
+      insertarFilaVehiculo(v);
+      document.getElementById("placa").value = "";
+      document.getElementById("modelo").value = "";
+      document.getElementById("anio").value = "";
+      document.getElementById("estado").value = "Activo";
+      document.getElementById("obs").value = "";
+    }
+
+    function agregarRepuesto() {
+      const r = {
+        vehiculo: document.getElementById("vehiculoRep").value,
+        repuesto: document.getElementById("repuesto").value,
+        fecha: document.getElementById("fechaRep").value,
+        costo: parseFloat(document.getElementById("costoRep").value) || 0
+      };
+      const repuestos = JSON.parse(localStorage.getItem("repuestos")) || [];
+      repuestos.push(r);
+      guardarDatos("repuestos", repuestos);
+      insertarFilaRepuesto(r);
+      actualizarResumen();
+      document.getElementById("vehiculoRep").value = "";
+      document.getElementById("repuesto").value = "";
+      document.getElementById("fechaRep").value = "";
+      document.getElementById("costoRep").value = "";
+    }
+
+    function agregarIngreso() {
+      const i = {
+        fecha: document.getElementById("fechaIngreso").value,
+        descripcion: document.getElementById("descIngreso").value,
+        monto: parseFloat(document.getElementById("montoIngreso").value) || 0
+      };
+      const ingresos = JSON.parse(localStorage.getItem("ingresos")) || [];
+      ingresos.push(i);
+      guardarDatos("ingresos", ingresos);
+      insertarFilaIngreso(i);
+      actualizarResumen();
+      document.getElementById("fechaIngreso").value = "";
+      document.getElementById("descIngreso").value = "";
+      document.getElementById("montoIngreso").value = "";
+    }
+
+    function agregarStock() {
+      const s = {
+        nombre: document.getElementById("nombreStock").value,
+        cantidad: parseInt(document.getElementById("cantidadStock").value) || 0
+      };
+      const stock = JSON.parse(localStorage.getItem("stock")) || [];
+      stock.push(s);
+      guardarDatos("stock", stock);
+      insertarFilaStock(s);
+      document.getElementById("nombreStock").value = "";
+      document.getElementById("cantidadStock").value = "";
+    }
+
+    function actualizarResumen() {
+      const repuestos = JSON.parse(localStorage.getItem("repuestos")) || [];
+      const ingresos = JSON.parse(localStorage.getItem("ingresos")) || [];
+      const totalGastos = repuestos.reduce((sum, r) => sum + r.costo, 0);
+      const totalIngresos = ingresos.reduce((sum, i) => sum + i.monto, 0);
+      const balance = totalIngresos - totalGastos;
+      document.getElementById("totalGastos").textContent = totalGastos.toFixed(2);
+      document.getElementById("totalIngresos").textContent = totalIngresos.toFixed(2);
+      document.getElementById("balance").textContent = balance.toFixed(2);
+      dibujarGrafico(totalIngresos, totalGastos);
+    }
+
+    function dibujarGrafico(ingresos, gastos) {
+      const ctx = document.getElementById('graficoResumen').getContext('2d');
+      if (window.graficoResumen) window.graficoResumen.destroy();
+      window.graficoResumen = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Ingresos', 'Gastos'],
+          datasets: [{
+            label: 'Resumen Financiero',
+            data: [ingresos, gastos],
+            backgroundColor: ['#4CAF50', '#F44336']
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    window.onload = cargarDatos;
+  </script>
+</body>
+</html>
